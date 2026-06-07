@@ -132,7 +132,6 @@ if __name__ == "__main__":
         station_id="USGS-09506000",
         start_date="2026-05-01",
         end_date="2026-05-07",
-        limit=3,
     )
 
     df, rejected_df = parse_streamflow_data(data)
