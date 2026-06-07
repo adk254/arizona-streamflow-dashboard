@@ -1,28 +1,68 @@
 import pandas as pd
 import requests
 
-# USGS national water information system api url
+# USGS water data api url
 BASE_URL = "https://api.waterdata.usgs.gov/ogcapi/v0/collections/daily/items"
 
-### request daily streamflow observations from the USGS api
+### request one page of daily streamflow observations from the USGS api
+def fetch_streamflow_page(
+        url: str,
+        params: dict | None = None,
+) -> dict:
+    response = requests.get(url, params=params, timeout=30)
+    response.raise_for_status()
+
+    return response.json()
+
+### helper func - find the url for the next page of api results
+def get_next_link(data: dict) -> str | None:
+    for link in data.get("links", []):
+        if link.get("rel") == "next":
+            return link.get("href")
+
+    return None
+
+### request all pages of daily streamflow observations from the USGS api
 def fetch_daily_streamflow(
         station_id: str,
         start_date: str,
         end_date: str,
+        limit: int = 1000,
 ) -> dict:
     params = {
         "f": "json",
-        "limit": 1000,
+        "limit": limit,
         "monitoring_location_id": station_id,
         "parameter_code": "00060",
         "statistic_id": "00003",
         "datetime": f"{start_date}/{end_date}",
     }
 
-    response = requests.get(BASE_URL, params=params, timeout = 30)
-    response.raise_for_status()
+    data = fetch_streamflow_page(BASE_URL, params=params)
+    all_features = data["features"].copy()
 
-    return response.json()
+    # follow each next link until every page has been retrieved
+    next_url = get_next_link(data)
+    seen_urls = set()
+
+    while next_url:
+        # stop if the api unexpectedly returns the same next link twice
+        if next_url in seen_urls:
+            raise RuntimeError("Repeated pagination link detected.")
+
+        seen_urls.add(next_url)
+
+        page_data = fetch_streamflow_page(next_url)
+        all_features.extend(page_data["features"])
+
+        next_url = get_next_link(page_data)
+
+    # return the combined observations in the same general response structure
+    data["features"] = all_features
+    data["numberReturned"] = len(all_features)
+
+    return data
+        
 
 
 ### convert the nested api response into clean pandas dataframes
@@ -92,17 +132,15 @@ if __name__ == "__main__":
         station_id="USGS-09506000",
         start_date="2026-05-01",
         end_date="2026-05-07",
+        limit=3,
     )
 
     df, rejected_df = parse_streamflow_data(data)
 
     print(df)
 
-    print("\nSummary statistics:")
-    print(df["streamflow_cfs"].describe())
-
-    print("\nRejected records:")
-    print(rejected_df)
+    print("\nNumber of records returned:")
+    print(data["numberReturned"])
 
     print("\nNumber of rejected records:")
     print(len(rejected_df))
