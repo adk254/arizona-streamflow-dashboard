@@ -126,20 +126,27 @@ def parse_streamflow_data(data: dict) -> tuple[pd.DataFrame, pd.DataFrame]:
     return clean_df, rejected_df
 
 
-### run a small test request for the verde river near camp verde station
+### run a one-year test request for the verde river near camp verde station
 if __name__ == "__main__":
     data = fetch_daily_streamflow(
         station_id="USGS-09506000",
-        start_date="2026-05-01",
-        end_date="2026-05-07",
+        start_date="2025-01-01",
+        end_date="2025-12-31",
     )
 
     df, rejected_df = parse_streamflow_data(data)
 
-    print(df)
+    print("Number of clean records:")
+    print(len(df))
 
-    print("\nNumber of records returned:")
-    print(data["numberReturned"])
+    print("\nDate range:")
+    print(df["date"].min(), "to", df["date"].max())
+
+    print("\nApproval statuses:")
+    print(df["approval_status"].value_counts())
+
+    print("\nStreamflow summary statistics:")
+    print(df["streamflow_cfs"].describe())
 
     print("\nNumber of rejected records:")
     print(len(rejected_df))
