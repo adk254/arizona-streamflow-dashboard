@@ -1,6 +1,8 @@
 import pandas as pd
 import requests
 
+from src.database import count_observations, save_observations
+
 # USGS water data api url
 BASE_URL = "https://api.waterdata.usgs.gov/ogcapi/v0/collections/daily/items"
 
@@ -135,6 +137,11 @@ if __name__ == "__main__":
     )
 
     df, rejected_df = parse_streamflow_data(data)
+
+    save_observations(df)
+
+    print("\nNumber of stored database records:")
+    print(count_observations())
 
     print("Number of clean records:")
     print(len(df))
