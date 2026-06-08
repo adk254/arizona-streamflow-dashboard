@@ -3,8 +3,10 @@ import requests
 
 from src.database import count_observations, save_observations
 
+
 # USGS water data api url
 BASE_URL = "https://api.waterdata.usgs.gov/ogcapi/v0/collections/daily/items"
+
 
 ### request one page of daily streamflow observations from the USGS api
 def fetch_streamflow_page(
@@ -16,6 +18,7 @@ def fetch_streamflow_page(
 
     return response.json()
 
+
 ### helper func - find the url for the next page of api results
 def get_next_link(data: dict) -> str | None:
     for link in data.get("links", []):
@@ -23,6 +26,7 @@ def get_next_link(data: dict) -> str | None:
             return link.get("href")
 
     return None
+
 
 ### request all pages of daily streamflow observations from the USGS api
 def fetch_daily_streamflow(
