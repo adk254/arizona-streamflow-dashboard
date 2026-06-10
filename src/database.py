@@ -181,3 +181,34 @@ def load_station_observations(
         df["date"] = pd.to_datetime(df["date"])
 
         return df
+    
+
+### retrieve stored station metadata
+def load_stations(
+        database_path: Path = DATABASE_PATH,
+) -> pd.DataFrame:
+    create_database(database_path)
+
+    with sqlite3.connect(database_path) as connection:
+        query = """
+            SELECT
+                station_id,
+                station_name,
+                state_name,
+                county_name,
+                site_type,
+                latitude,
+                longitude,
+                altitude_ft,
+                drainage_area_sqmi,
+                time_zone
+            FROM stations
+            ORDER BY station_name
+        """
+
+        df = pd.read_sql_query(
+            query,
+            connection,
+        )
+
+    return df

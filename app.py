@@ -1,11 +1,8 @@
 import matplotlib.pyplot as plt
 import streamlit as st
 
-from src.database import load_station_observations
 
-
-# use the verde river station for the first dashboard version
-STATION_ID = "USGS-09506000"
+from src.database import load_station_observations, load_stations
 
 
 ### configure the browser tab and page layout
@@ -16,8 +13,42 @@ st.set_page_config(
 )
 
 
-### load stored observations from the local sqlite database
-df = load_station_observations(STATION_ID)
+### load stored station metadata for the sidebar options
+stations_df = load_stations()
+
+if stations_df.empty:
+    st.error("No monitoring stations were found in the database.")
+    st.stop()
+
+
+### connect readable station names to their station ids
+station_options = dict(
+    zip(
+        stations_df["station_name"],
+        stations_df["station_id"],
+    )
+)
+
+
+### add sidebar controls
+with st.sidebar:
+    st.header("Display options")
+
+    selected_station_name = st.selectbox(
+        "Monitoring station",
+        options=list(station_options.keys()),
+    )
+
+    y_axis_scale = st.radio(
+        "Y-axis scale",
+        options=["Linear", "Logarithmic"],
+    )
+
+
+### load observations for the selected monitoring station
+selected_station_id = station_options[selected_station_name]
+
+df = load_station_observations(selected_station_id)
 
 if df.empty:
     st.error("No stored observations were found for this station.")
@@ -48,36 +79,26 @@ st.subheader(station_name)
 st.caption(
     f"{site_type} monitoring station | "
     f"{county_name}, {state_name} | "
-    f"Station ID: {STATION_ID}"
+    f"Station ID: {selected_station_id}"
 )
-
-
-### add a sidebar control for the graph scale
-with st.sidebar:
-    st.header("Display options")
-
-    y_axis_scale = st.radio(
-        "Y-axis scale",
-        options=["Linear", "Logarithmic"],
-    )
 
 
 ### display summary metrics in one row
 metric_1, metric_2, metric_3, metric_4 = st.columns(4)
 
 metric_1.metric(
-    "Latest daily mean",
-    f"{latest_row['streamflow_cfs']:,.1f} ft³/s",
+    "Latest daily mean (ft³/s)",
+    f"{latest_row['streamflow_cfs']:,.1f}",
 )
 
 metric_2.metric(
-    "Average daily mean",
-    f"{average_streamflow:,.1f} ft³/s",
+    "Average daily mean (ft³/s)",
+    f"{average_streamflow:,.1f}",
 )
 
 metric_3.metric(
-    "Peak daily mean",
-    f"{peak_row['streamflow_cfs']:,.1f} ft³/s",
+    "Peak daily mean (ft³/s)",
+    f"{peak_row['streamflow_cfs']:,.1f}",
 )
 
 metric_4.metric(
